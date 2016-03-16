@@ -291,10 +291,18 @@ merge_crdts(Type, {CRDTs, TS}) ->
     %% Merge with the tombstone to drop any removed dots
     Type:merge(TS, V).
 
-%% @doc query map (not implemented yet)
+%% @doc query map
 -spec value(term(), riak_dt_map()) -> values().
-value(_, Map) ->
-    value(Map).
+value(Field, {_C, V, _D}=Map) when is_list(V) ->
+    value(Field, to_v2(Map));
+value(Field, {_Clock, Values, _Deferred}) ->
+    lists:sort(?DICT:fold(fun({Name, Type}, CRDTs, Acc) when Name =:= Field ->
+                                  Merged = merge_crdts(Type, CRDTs),
+                                  [{{Name, Type}, Type:value(Merged)} | Acc];
+                              (_, _, Acc) -> Acc
+                          end,
+                          [],
+                          Values)).
 
 %% @doc update the `riak_dt_map()' or a field in the `riak_dt_map()' by
 %% executing the `map_op()'. `Ops' is a list of one or more of the
