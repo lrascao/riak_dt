@@ -181,7 +181,7 @@
 
 %% API
 -export([new/0, value/1, value/2, update/3, update/4]).
--export([merge/2, equal/2, to_binary/1, from_binary/1]).
+-export([merge/2, equal/2, to_binary/1, to_binary_field/2, from_binary/1]).
 -export([to_binary/2]).
 -export([precondition_context/1, stats/1, stat/2]).
 -export([parent_clock/2]).
@@ -698,6 +698,16 @@ stat(_,_) -> undefined.
 to_binary(Map) ->
     {ok, B} = to_binary(?V2_VERS, Map),
     B.
+
+-spec to_binary_field(term(), riak_dt_map()) -> binary_map().
+to_binary_field(Field, {_Clock, Values, _Deferred} = _Map) ->
+    ?DICT:fold(fun({Name, Type}, CRDTs, _Acc) when Name =:= Field ->
+                      Merged = merge_crdts(Type, CRDTs),
+                      Type:to_binary(Merged);
+                  (_, _, Acc) -> Acc
+               end,
+               [],
+               Values).
 
 %% @private encode v1 maps as v2, and vice versa. The first argument
 %% is the target binary type.
